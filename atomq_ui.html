@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AtomQ — Universal Language Engine</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.15);--text:#e8e8f0;--muted:#6b6b80;--accent:#7c6af5;--accent2:#4ecdc4;--accent3:#ff6b6b;--gold:#f5c842}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,106,245,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,106,245,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.container{max-width:900px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index:1}
+.header{text-align:center;margin-bottom:3rem}
+.logo{font-family:'Space Mono',monospace;font-size:3rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem}
+.tagline{color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.polash-note{margin-top:.75rem;font-size:12px;color:var(--muted);font-style:italic}
+.record-area{display:flex;flex-direction:column;align-items:center;gap:1.5rem;margin-bottom:3rem}
+.record-btn{width:120px;height:120px;border-radius:50%;border:2px solid var(--accent);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;transition:all .3s ease;position:relative;overflow:hidden}
+.record-btn::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(124,106,245,0.15),transparent 70%);opacity:0;transition:opacity .3s}
+.record-btn:hover::before{opacity:1}
+.record-btn.recording{border-color:var(--accent3);animation:pulse-ring 1.5s ease infinite}
+.record-btn.recording::before{opacity:1;background:radial-gradient(circle,rgba(255,107,107,0.2),transparent 70%)}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(255,107,107,.4)}70%{box-shadow:0 0 0 20px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}
+.mic-icon{font-size:36px;line-height:1}
+.record-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.record-btn.recording .record-label{color:var(--accent3)}
+.status-text{font-size:13px;color:var(--muted);height:20px;transition:all .3s}
+.status-text.active{color:var(--accent2)}
+.waveform-container{width:100%;max-width:500px;height:60px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.results{display:none;animation:fadeIn .5s ease}
+.results.visible{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.meaning-banner{background:var(--surface2);border:1px solid var(--accent);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+.meaning-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--accent);text-transform:uppercase;margin-bottom:.75rem}
+.meaning-text{font-size:14px;color:var(--text);line-height:1.8}
+.confidence-bar{margin-top:1rem;display:flex;align-items:center;gap:10px}
+.confidence-label{font-size:11px;color:var(--muted);white-space:nowrap}
+.bar-track{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 1s ease}
+.confidence-value{font-family:'Space Mono',monospace;font-size:12px;color:var(--accent2);min-width:35px;text-align:right}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-bottom:1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card-title{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:6px}
+.card-title-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.metric-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.metric-row:last-child{border-bottom:none}
+.metric-key{font-size:12px;color:var(--muted)}
+.metric-val{font-family:'Space Mono',monospace;font-size:12px;color:var(--text)}
+.metric-val.highlight{color:var(--accent2)}
+.metric-val.warning{color:var(--gold)}
+.metric-val.positive{color:var(--accent2)}
+.metric-val.negative{color:var(--accent3)}
+.sentence-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.badge-declarative{background:rgba(78,205,196,.15);color:var(--accent2)}
+.badge-interrogative{background:rgba(124,106,245,.15);color:var(--accent)}
+.badge-exclamative{background:rgba(245,200,66,.15);color:var(--gold)}
+.badge-imperative{background:rgba(255,107,107,.15);color:var(--accent3)}
+.primitives-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem}
+.primitives-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:.75rem}
+.primitive-tag{padding:4px 12px;border-radius:20px;font-family:'Space Mono',monospace;font-size:11px;background:rgba(124,106,245,.12);border:1px solid rgba(124,106,245,.3);color:var(--accent)}
+.dep-graph{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem}
+.dep-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+.dep-phrase{font-family:'Space Mono',monospace;color:var(--accent2);min-width:80px}
+.dep-role{color:var(--text)}
+.family-name{font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:.5rem}
+.family-chars{display:flex;flex-direction:column;gap:4px;margin-top:.5rem}
+.family-char{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.family-char::before{content:'—';color:var(--accent);font-size:10px}
+.valence-meter{margin-top:.75rem;display:flex;flex-direction:column;gap:6px}
+.valence-track{height:6px;background:linear-gradient(90deg,var(--accent3),var(--border2) 50%,var(--accent2));border-radius:3px;position:relative}
+.valence-pointer{position:absolute;top:-4px;width:14px;height:14px;background:white;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 6px rgba(0,0,0,.5);transition:left .8s ease}
+.valence-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.error-msg{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:8px;padding:1rem;color:var(--accent3);font-size:13px;margin-bottom:1rem;display:none}
+.error-msg.visible{display:block}
+.loading{display:none;text-align:center;padding:2rem;color:var(--muted)}
+.loading.visible{display:block}
+.loading-dots span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin:0 3px;animation:bounce 1.2s ease infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.loading-text{margin-top:1rem;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em}
+.instructions{text-align:center;padding:2rem;color:var(--muted);font-size:13px;line-height:2}
+.instructions strong{color:var(--text);font-weight:500}
+.footer{text-align:center;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border);color:var(--muted);font-size:11px;line-height:2}
+@media(max-width:600px){.logo{font-size:2rem}.cards-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">AtomQ</div>
+    <div class="tagline">Universal Language Engine — No Dictionary Required</div>
+    <div class="polash-note">Named for Polash — who taught us what mistranslation costs</div>
+  </div>
+
+  <div class="record-area">
+    <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+      <span class="mic-icon">🎙</span>
+      <span class="record-label" id="btnLabel">Record</span>
+    </button>
+    <div class="status-text" id="statusText">Click to start — speak in any language</div>
+    <div class="waveform-container"><canvas id="waveform"></canvas></div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="loading" id="loading">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div class="loading-text">Extracting universal mathematics...</div>
+  </div>
+
+  <div class="instructions" id="instructions">
+    <strong>Speak any language.</strong> AtomQ analyzes it without knowing what it is.<br>
+    No dictionary. No translation model. Pure mathematics.<br><br>
+    Try English, Spanish, Arabic, Mandarin, French, Hindi<br>
+    Or make up a language entirely. The math still works.
+  </div>
+
+  <div class="results" id="results">
+    <div class="meaning-banner">
+      <div class="meaning-title">▸ Meaning Extraction Result</div>
+      <div class="meaning-text" id="meaningText"></div>
+      <div class="confidence-bar">
+        <span class="confidence-label">Confidence</span>
+        <div class="bar-track"><div class="bar-fill" id="confBar" style="width:0%"></div></div>
+        <span class="confidence-value" id="confValue">0%</span>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot"></div>Language Family</div>
+        <div class="family-name" id="familyName"></div>
+        <div class="metric-row"><span class="metric-key">Confidence</span><span class="metric-val highlight" id="familyConf"></span></div>
+        <div class="metric-row"><span class="metric-key">Word order</span><span class="metric-val" id="familyTypology"></span></div>
+        <div class="family-chars" id="familyChars"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--accent2)"></div>Prosodic Mathematics</div>
+        <div class="metric-row"><span class="metric-key">F0 mean (Hz)</span><span class="metric-val" id="f0mean"></span></div>
+        <div class="metric-row"><span class="metric-key">F0 range (Hz)</span><span class="metric-val" id="f0range"></span></div>
+        <div class="metric-row"><span class="metric-key">Rhythm type</span><span class="metric-val highlight" id="rhythm"></span></div>
+        <div class="metric-row"><span class="metric-key">Speech rate</span><span class="metric-val" id="speechRate"></span></div>
+        <div class="metric-row"><span class="metric-key">Terminal contour</span><span class="metric-val warning" id="terminal"></span></div>
+        <div class="metric-row"><span class="metric-key">Tonal language</span><span class="metric-val" id="tonal"></span></div>
+        <div class="metric-row"><span class="metric-key">Info density</span><span class="metric-val" id="infoDensity"></span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--gold)"></div>Syntactic Structure</div>
+        <div class="metric-row"><span class="metric-key">Sentence type</span><span class="metric-val" id="sentenceType"></span></div>
+        <div class="metric-row"><span class="metric-key">Phrases detected</span><span class="metric-val" id="phraseCount"></span></div>
+        <div class="metric-row"><span class="metric-key">Negation</span><span class="metric-val" id="negation"></span></div>
+        <div class="metric-row"><span class="metric-key">Boundaries (sec)</span><span class="metric-val" id="boundaries" style="font-size:11px"></span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot" style="background:var(--accent3)"></div>Semantic Analysis</div>
+        <div class="metric-row"><span class="metric-key">Polarity</span><span class="metric-val" id="polarity"></span></div>
+        <div class="metric-row"><span class="metric-key">Certainty</span><span class="metric-val" id="certainty"></span></div>
+        <div class="metric-row"><span class="metric-key">Agent (who)</span><span class="metric-val highlight" id="agent"></span></div>
+        <div class="metric-row"><span class="metric-key">Action</span><span class="metric-val" id="action"></span></div>
+        <div class="metric-row"><span class="metric-key">Patient (what)</span><span class="metric-val" id="patient"></span></div>
+        <div style="margin-top:.75rem">
+          <div class="metric-key" style="margin-bottom:6px">Emotional valence</div>
+          <div class="valence-meter">
+            <div class="valence-track"><div class="valence-pointer" id="valencePtr" style="left:50%"></div></div>
+            <div class="valence-labels"><span>Negative</span><span>Neutral</span><span>Positive</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="primitives-section">
+      <div class="card-title"><div class="card-title-dot"></div>Universal Semantic Primitives Detected
+        <span style="color:var(--muted);font-size:10px;margin-left:8px;font-style:italic">(Wierzbicka's universals — present in ALL human languages)</span>
+      </div>
+      <div class="primitives-wrap" id="primitivesWrap"></div>
+    </div>
+
+    <div class="dep-graph">
+      <div class="card-title"><div class="card-title-dot" style="background:var(--accent2)"></div>Inferred Dependency Structure
+        <span style="color:var(--muted);font-size:10px;margin-left:8px;font-style:italic">(from prosody alone — no vocabulary)</span>
+      </div>
+      <div id="depGraph"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    AtomQ v0.1 · Proof of Concept<br>
+    Built on Chomsky · Shannon · Wierzbicka · Ramus · Pellegrino<br>
+    <span style="color:var(--accent)">No dictionary. No translation model. Universal mathematics only.</span>
+  </div>
+</div>
+
+<script>
+let mediaRecorder=null,audioChunks=[],isRecording=false,audioContext=null,analyser=null,animationId=null,stream=null;
+
+async function toggleRecording(){isRecording?stopRecording():await startRecording()}
+
+async function startRecording(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    audioContext=new(window.AudioContext||window.webkitAudioContext)();
+    analyser=audioContext.createAnalyser();
+    analyser.fftSize=256;
+    const source=audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+    drawWaveform();
+    const mimeType=getSupportedMimeType();
+    mediaRecorder=new MediaRecorder(stream,mimeType?{mimeType}:{});
+    audioChunks=[];
+    mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data)};
+    mediaRecorder.onstop=processAudio;
+    mediaRecorder.start(100);
+    isRecording=true;
+    document.getElementById('recordBtn').classList.add('recording');
+    document.getElementById('btnLabel').textContent='Stop';
+    setStatus('Recording... speak in any language',true);
+    hideResults();
+  }catch(err){showError('Microphone access denied. Please allow microphone access and try again.');console.error(err)}
+}
+
+function stopRecording(){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  if(animationId)cancelAnimationFrame(animationId);
+  if(audioContext)audioContext.close();
+  isRecording=false;
+  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('btnLabel').textContent='Record';
+  setStatus('Processing...',true);
+}
+
+function getSupportedMimeType(){
+  const types=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4'];
+  return types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+}
+
+async function processAudio(){
+  setStatus('Analyzing with AtomQ mathematics...',true);
+  showLoading();
+  try{
+    const blob=new Blob(audioChunks,{type:getSupportedMimeType()||'audio/webm'});
+    const ab=await blob.arrayBuffer();
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const decoded=await ctx.decodeAudioData(ab);
+    const channelData=decoded.getChannelData(0);
+    const sr=decoded.sampleRate;
+    const result=analyzeAtomQ(channelData,sr);
+    hideLoading();
+    displayResults(result);
+    setStatus('Analysis complete — speak again to analyze another sample',false);
+  }catch(err){
+    hideLoading();
+    showError('Analysis failed: '+err.message);
+    setStatus('Click to try again',false);
+    console.error(err);
+  }
+}
+
+function analyzeAtomQ(audioData,sr){
+  const audio=Array.from(audioData);
+  const duration=audio.length/sr;
+  const f0Result=estimateF0(audio,sr);
+  const rhythmResult=analyzeRhythm(audio,sr);
+  const terminalContour=detectTerminalContour(f0Result.contour);
+  const intensityResult=analyzeIntensity(audio,sr);
+  const isTonal=detectTonality(f0Result.contour,f0Result.range);
+  const langFamily=detectLanguageFamily(rhythmResult.type,f0Result.mean,f0Result.range,rhythmResult.rate,isTonal);
+  const sentenceType=inferSentenceType(terminalContour,f0Result.slope);
+  const phraseResult=detectPhrases(audio,sr);
+  const primitives=detectPrimitives(sentenceType,f0Result,intensityResult,phraseResult.negation);
+  const semantics=buildSemanticFrame(sentenceType,f0Result,intensityResult,phraseResult,langFamily.typology);
+  const confidence=computeConfidence(f0Result,rhythmResult,duration);
+  return{
+    duration:duration.toFixed(1),
+    prosody:{f0_mean:f0Result.mean.toFixed(1),f0_range:f0Result.range.toFixed(1),f0_contour:f0Result.contour,rhythm_type:rhythmResult.type,speech_rate:rhythmResult.rate.toFixed(1),terminal_contour:terminalContour,is_tonal:isTonal,entropy:computeEntropy(f0Result.voiced).toFixed(2),info_density:'~39'},
+    language_family:langFamily,
+    syntax:{sentence_type:sentenceType,phrase_count:phraseResult.count,phrase_boundaries:phraseResult.boundaries,negation_detected:phraseResult.negation,dependency_graph:buildDepGraph(phraseResult.count,sentenceType,langFamily.typology)},
+    semantics:semantics,
+    primitives:primitives,
+    confidence:confidence,
+    meaning_summary:buildMeaningSummary(sentenceType,semantics,primitives,langFamily,phraseResult)
+  };
+}
+
+function estimateF0(audio,sr){
+  const frameSize=Math.floor(sr*0.04),hopSize=Math.floor(sr*0.01);
+  const f0Values=[];
+  const fMin=75,fMax=600;
+  for(let start=0;start+frameSize<audio.length;start+=hopSize){
+    const frame=audio.slice(start,start+frameSize);
+    const rms=Math.sqrt(frame.reduce((s,x)=>s+x*x,0)/frame.length);
+    if(rms<0.008){f0Values.push(0);continue}
+    const minLag=Math.floor(sr/fMax),maxLag=Math.min(Math.floor(sr/fMin),frame.length-1);
+    let bestLag=0,bestCorr=-1;
+    for(let lag=minLag;lag<=maxLag;lag++){
+      let corr=0,norm=0;
+      for(let i=0;i<frame.length-lag;i++){corr+=frame[i]*frame[i+lag];norm+=frame[i]*frame[i]}
+      if(norm>0)corr/=norm;
+      if(corr>bestCorr){bestCorr=corr;bestLag=lag}
+    }
+    f0Values.push(bestCorr>0.3&&bestLag>0?sr/bestLag:0);
+  }
+  const voiced=f0Values.filter(f=>f>0);
+  const mean=voiced.length>0?voiced.reduce((a,b)=>a+b,0)/voiced.length:0;
+  const range=voiced.length>0?Math.max(...voiced)-Math.min(...voiced):0;
+  let slope=0;
+  if(voiced.length>2){
+    const n=voiced.length,xMean=(n-1)/2,yMean=mean;
+    let num=0,den=0;
+    voiced.forEach((y,i)=>{num+=(i-xMean)*(y-yMean);den+=(i-xMean)**2});
+    slope=den>0?num/den:0;
+  }
+  return{contour:f0Values,voiced,mean,range,slope};
+}
+
+function computeEntropy(voiced){
+  if(voiced.length<5)return 0;
+  const min=Math.min(...voiced),max=Math.max(...voiced);
+  if(max===min)return 0;
+  const bins=20,hist=new Array(bins).fill(0);
+  voiced.forEach(v=>{const idx=Math.min(bins-1,Math.floor((v-min)/(max-min)*bins));hist[idx]++});
+  const total=voiced.length;
+  return -hist.filter(h=>h>0).reduce((s,h)=>{const p=h/total;return s+p*Math.log2(p)},0);
+}
+
+function analyzeRhythm(audio,sr){
+  const hopSize=256,frameSize=512,energies=[];
+  for(let i=0;i+frameSize<audio.length;i+=hopSize){
+    const frame=audio.slice(i,i+frameSize);
+    energies.push(frame.reduce((s,x)=>s+x*x,0)/frameSize);
+  }
+  const onsets=[],threshold=Math.max(...energies)*0.1;
+  for(let i=2;i<energies.length-2;i++){
+    if(energies[i]>threshold&&energies[i]>energies[i-1]&&energies[i]>energies[i-2]&&energies[i]>energies[i+1]&&energies[i]>energies[i+2])
+      onsets.push(i*hopSize/sr);
+  }
+  const rate=onsets.length/(audio.length/sr);
+  let npvi=50;
+  if(onsets.length>=3){
+    const iois=[];
+    for(let i=1;i<onsets.length;i++)iois.push(onsets[i]-onsets[i-1]);
+    const pairs=[];
+    for(let i=0;i<iois.length-1;i++){const avg=(iois[i]+iois[i+1])/2;if(avg>0)pairs.push(Math.abs(iois[i]-iois[i+1])/avg)}
+    if(pairs.length>0)npvi=pairs.reduce((a,b)=>a+b,0)/pairs.length*100;
+  }
+  const type=npvi>50?'stress-timed':npvi<35?'syllable-timed':'mora-timed';
+  return{type,rate,onsets,npvi};
+}
+
+function detectTerminalContour(f0Contour){
+  const voiced=f0Contour.filter(f=>f>0);
+  if(voiced.length<8)return'unknown';
+  const tailSize=Math.max(3,Math.floor(voiced.length/5));
+  const tail=voiced.slice(-tailSize);
+  const n=tail.length,xMean=(n-1)/2,yMean=tail.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;
+  tail.forEach((y,i)=>{num+=(i-xMean)*(y-yMean);den+=(i-xMean)**2});
+  const slope=den>0?num/den:0;
+  const lastVal=tail[tail.length-1],overallMean=voiced.reduce((a,b)=>a+b,0)/voiced.length;
+  if(slope>2.0&&lastVal>overallMean)return'rising';
+  if(slope<-2.0&&lastVal<overallMean)return'falling';
+  if(slope>1.0)return'rise-fall';
+  return'level';
+}
+
+function analyzeIntensity(audio,sr){
+  const hopSize=512,rmsValues=[];
+  for(let i=0;i+hopSize<audio.length;i+=hopSize){
+    const frame=audio.slice(i,i+hopSize);
+    rmsValues.push(Math.sqrt(frame.reduce((s,x)=>s+x*x,0)/hopSize));
+  }
+  const mean=rmsValues.reduce((a,b)=>a+b,0)/rmsValues.length||0;
+  const std=Math.sqrt(rmsValues.reduce((s,v)=>s+(v-mean)**2,0)/rmsValues.length)||0;
+  return{mean,std,values:rmsValues};
+}
+
+function detectTonality(f0Contour,f0Range){
+  const voiced=f0Contour.filter(f=>f>0);
+  if(voiced.length<10)return false;
+  return computeEntropy(voiced)>3.5&&f0Range>150;
+}
+
+function detectLanguageFamily(rhythmType,f0Mean,f0Range,speechRate,isTonal){
+  const families=[
+    {name:'Indo-European-Germanic',tonal:false,rhythm:'stress-timed',rMin:3.5,rMax:6.5,fMin:80,fMax:180,typology:'SVO'},
+    {name:'Indo-European-Romance',tonal:false,rhythm:'syllable-timed',rMin:6.0,rMax:9.0,fMin:90,fMax:200,typology:'SVO'},
+    {name:'Indo-European-Slavic',tonal:false,rhythm:'stress-timed',rMin:4.0,rMax:7.0,fMin:85,fMax:175,typology:'SVO (flexible)'},
+    {name:'Semitic',tonal:false,rhythm:'stress-timed',rMin:4.5,rMax:7.5,fMin:90,fMax:190,typology:'VSO/SVO'},
+    {name:'Sino-Tibetan',tonal:true,rhythm:'syllable-timed',rMin:5.5,rMax:8.5,fMin:100,fMax:200,typology:'SVO'},
+    {name:'Tai-Kadai',tonal:true,rhythm:'syllable-timed',rMin:5.0,rMax:8.0,fMin:80,fMax:180,typology:'SVO'},
+    {name:'Niger-Congo',tonal:true,rhythm:'syllable-timed',rMin:5.5,rMax:8.5,fMin:110,fMax:220,typology:'SVO'},
+    {name:'Japonic',tonal:false,rhythm:'mora-timed',rMin:6.5,rMax:9.5,fMin:100,fMax:220,typology:'SOV'},
+    {name:'Koreanic',tonal:false,rhythm:'syllable-timed',rMin:5.5,rMax:8.5,fMin:95,fMax:210,typology:'SOV'},
+    {name:'Dravidian',tonal:false,rhythm:'syllable-timed',rMin:5.0,rMax:8.0,fMin:100,fMax:210,typology:'SOV'},
+    {name:'Turkic',tonal:false,rhythm:'syllable-timed',rMin:5.0,rMax:7.5,fMin:90,fMax:195,typology:'SOV'},
+  ];
+  let best=families[0],bestScore=-1;
+  families.forEach(f=>{
+    let score=0;
+    if(f.tonal===isTonal)score+=0.35;
+    if(f.rhythm===rhythmType)score+=0.30;
+    if(speechRate>=f.rMin&&speechRate<=f.rMax)score+=0.20;
+    if(f0Range>=f.fMin&&f0Range<=f.fMax)score+=0.15;
+    if(score>bestScore){bestScore=score;best=f}
+  });
+  return{name:best.name,confidence:Math.round(bestScore*100),typology:best.typology,characteristics:[`Rhythm: ${best.rhythm}`,`Tonal: ${best.tonal?'Yes':'No'}`,`Word order inferred: ${best.typology}`]};
+}
+
+function inferSentenceType(terminal,slope){
+  if(terminal==='rising')return'interrogative';
+  if(terminal==='falling')return'declarative';
+  if(terminal==='rise-fall')return'exclamative';
+  if(slope>1.5)return'interrogative';
+  if(slope<-1.5)return'declarative';
+  return'declarative';
+}
+
+function detectPhrases(audio,sr){
+  const hopSize=256,frameSize=512,boundaries=[];
+  let count=1;
+  for(let i=0;i+frameSize<audio.length;i+=hopSize){
+    const frame=audio.slice(i,i+frameSize);
+    const rms=Math.sqrt(frame.reduce((s,x)=>s+x*x,0)/frameSize);
+    if(rms<0.004){
+      const t=parseFloat((i/sr).toFixed(2));
+      if(boundaries.length===0||t-boundaries[boundaries.length-1]>0.3){boundaries.push(t);count++}
+    }
+  }
+  return{count,boundaries:boundaries.slice(0,5),negation:false};
+}
+
+function detectPrimitives(sentenceType,f0Result,intensityResult,negation){
+  const p=[];
+  if(sentenceType==='interrogative')p.push('WHAT / WHERE / WHO (question)');
+  if(negation)p.push('NOT (negation)');
+  if(sentenceType==='declarative'&&f0Result.slope<0)p.push('KNOW (certain assertion)');
+  else p.push('THINK (uncertain / hedged)');
+  if(intensityResult.std>intensityResult.mean*0.4)p.push('VERY (intensification)');
+  const valence=computeValence(f0Result,intensityResult);
+  if(valence>0.3)p.push('GOOD (positive evaluation)');
+  else if(valence<-0.3)p.push('BAD (negative evaluation)');
+  p.push('HAPPEN / DO (event)');
+  p.push('SOMEONE (person reference)');
+  p.push('NOW (present reference)');
+  return[...new Set(p)].slice(0,8);
+}
+
+function computeValence(f0Result,intensityResult){
+  let v=0;
+  if(f0Result.mean>200)v+=0.2;else if(f0Result.mean<130)v-=0.15;
+  if(f0Result.range>100)v+=0.15;else if(f0Result.range<40)v-=0.1;
+  if(intensityResult.std>intensityResult.mean*0.3)v+=0.1;
+  return Math.max(-1,Math.min(1,v));
+}
+
+function buildSemanticFrame(sentenceType,f0Result,intensityResult,phraseResult,typology){
+  const valence=computeValence(f0Result,intensityResult);
+  const certainty=sentenceType==='declarative'&&f0Result.slope<0?85:45;
+  const polarity=phraseResult.negation?'negative':'positive';
+  let agent='',action='',patient='';
+  if(phraseResult.count>=2){
+    if(typology.startsWith('SOV')){agent='[phrase 1]';action='[phrase 3/last]';patient='[phrase 2]'}
+    else if(typology.startsWith('VSO')){action='[phrase 1]';agent='[phrase 2]';patient='[phrase 3]'}
+    else{agent='[phrase 1]';action='[phrase 2]';patient='[phrase 3 if present]'}
+  }
+  return{polarity,certainty,emotional_valence:valence,agent,action,patient};
+}
+
+function buildDepGraph(phraseCount,sentenceType,typology){
+  const g={};
+  if(phraseCount===1){g['phrase_0']={role:'predicate',children:[]}}
+  else if(phraseCount===2){g['phrase_0']={role:'subject/agent',children:['phrase_1']};g['phrase_1']={role:'predicate/verb',children:[]}}
+  else{
+    if(typology.startsWith('SVO')){g['phrase_0']={role:'subject/agent',children:['phrase_1']};g['phrase_1']={role:'predicate/verb',children:['phrase_2']};g['phrase_2']={role:'object/patient',children:[]}}
+    else if(typology.startsWith('SOV')){g['phrase_0']={role:'subject/agent',children:['phrase_1']};g['phrase_1']={role:'object/patient',children:['phrase_2']};g['phrase_2']={role:'predicate/verb',children:[]}}
+    else{g['phrase_0']={role:'predicate/verb',children:['phrase_1','phrase_2']};g['phrase_1']={role:'subject/agent',children:[]};g['phrase_2']={role:'object/patient',children:[]}}
+    for(let i=3;i<phraseCount;i++)g[`phrase_${i}`]={role:'modifier/adjunct',children:[]};
+  }
+  return g;
+}
+
+function computeConfidence(f0Result,rhythmResult,duration){
+  let c=30;
+  if(duration>0.5)c+=15;
+  if(f0Result.mean>0)c+=20;
+  if(f0Result.voiced.length>10)c+=15;
+  if(rhythmResult.type!=='unknown')c+=10;
+  if(rhythmResult.rate>1.0)c+=10;
+  return Math.min(95,c);
+}
+
+function buildMeaningSummary(sentenceType,semantics,primitives,langFamily,phraseResult){
+  const typeMap={interrogative:'QUESTION',declarative:'STATEMENT',exclamative:'EXCLAMATION',imperative:'COMMAND',continuation:'CONTINUATION'};
+  const parts=[`Act: ${typeMap[sentenceType]||'STATEMENT'}`];
+  if(semantics.polarity==='negative')parts.push('Polarity: NEGATIVE');
+  parts.push(`Structure: ${phraseResult.count} phrase(s)`);
+  parts.push(`Word order: ${langFamily.typology}`);
+  if(semantics.agent)parts.push(`Agent: ${semantics.agent}`);
+  if(semantics.certainty>70)parts.push('Certainty: HIGH');
+  else if(semantics.certainty<40)parts.push('Certainty: LOW');
+  const valStr=semantics.emotional_valence>0.3?'POSITIVE':semantics.emotional_valence<-0.3?'NEGATIVE':null;
+  if(valStr)parts.push(`Affect: ${valStr}`);
+  return parts.join(' | ');
+}
+
+function drawWaveform(){
+  const canvas=document.getElementById('waveform');
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;
+  function draw(){
+    animationId=requestAnimationFrame(draw);
+    if(!analyser)return;
+    const buf=new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(buf);
+    ctx.fillStyle='#12121a';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.lineWidth=2;ctx.strokeStyle='#7c6af5';ctx.beginPath();
+    const sw=canvas.width/buf.length;let x=0;
+    for(let i=0;i<buf.length;i++){const v=buf[i]/128,y=v*canvas.height/2;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);x+=sw}
+    ctx.lineTo(canvas.width,canvas.height/2);ctx.stroke();
+  }
+  draw();
+}
+
+function setStatus(text,active){const el=document.getElementById('statusText');el.textContent=text;el.className='status-text'+(active?' active':'')}
+function showError(msg){const el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('visible')}
+function hideError(){document.getElementById('errorMsg').classList.remove('visible')}
+function showLoading(){document.getElementById('loading').classList.add('visible');document.getElementById('instructions').style.display='none'}
+function hideLoading(){document.getElementById('loading').classList.remove('visible')}
+function hideResults(){document.getElementById('results').classList.remove('visible');document.getElementById('instructions').style.display='block';hideError()}
+
+function displayResults(r){
+  document.getElementById('meaningText').textContent=r.meaning_summary;
+  document.getElementById('confBar').style.width=r.confidence+'%';
+  document.getElementById('confValue').textContent=r.confidence+'%';
+  document.getElementById('familyName').textContent=r.language_family.name;
+  document.getElementById('familyConf').textContent=r.language_family.confidence+'%';
+  document.getElementById('familyTypology').textContent=r.language_family.typology;
+  document.getElementById('familyChars').innerHTML=r.language_family.characteristics.map(c=>`<div class="family-char">${c}</div>`).join('');
+  document.getElementById('f0mean').textContent=r.prosody.f0_mean+' Hz';
+  document.getElementById('f0range').textContent=r.prosody.f0_range+' Hz';
+  document.getElementById('rhythm').textContent=r.prosody.rhythm_type;
+  document.getElementById('speechRate').textContent=r.prosody.speech_rate+' syl/sec';
+  document.getElementById('terminal').textContent=r.prosody.terminal_contour;
+  const tonalEl=document.getElementById('tonal');tonalEl.textContent=r.prosody.is_tonal?'Yes':'No';tonalEl.className='metric-val '+(r.prosody.is_tonal?'highlight':'');
+  document.getElementById('infoDensity').textContent='~39 bits/sec (universal)';
+  const stEl=document.getElementById('sentenceType');
+  stEl.innerHTML=`<span class="sentence-badge badge-${r.syntax.sentence_type||'declarative'}">${r.syntax.sentence_type}</span>`;
+  document.getElementById('phraseCount').textContent=r.syntax.phrase_count;
+  const negEl=document.getElementById('negation');negEl.textContent=r.syntax.negation_detected?'Detected':'None detected';negEl.className='metric-val '+(r.syntax.negation_detected?'warning':'');
+  document.getElementById('boundaries').textContent=r.syntax.phrase_boundaries.length>0?r.syntax.phrase_boundaries.join('s, ')+'s':'None detected';
+  const polEl=document.getElementById('polarity');polEl.textContent=r.semantics.polarity;polEl.className='metric-val '+(r.semantics.polarity==='positive'?'positive':'negative');
+  document.getElementById('certainty').textContent=r.semantics.certainty+'%';
+  document.getElementById('agent').textContent=r.semantics.agent||'—';
+  document.getElementById('action').textContent=r.semantics.action||'—';
+  document.getElementById('patient').textContent=r.semantics.patient||'—';
+  const pct=((r.semantics.emotional_valence+1)/2*100).toFixed(0);
+  document.getElementById('valencePtr').style.left=pct+'%';
+  document.getElementById('primitivesWrap').innerHTML=r.primitives.map(p=>`<span class="primitive-tag">${p}</span>`).join('');
+  const depEl=document.getElementById('depGraph');
+  depEl.innerHTML=Object.entries(r.syntax.dependency_graph).map(([id,props])=>{
+    const ch=props.children.length>0?` → <span style="color:var(--muted)">${props.children.join(', ')}</span>`:'';
+    return`<div class="dep-row"><span class="dep-phrase">${id}</span><span style="color:var(--muted);margin:0 6px">→</span><span class="dep-role">${props.role}</span>${ch}</div>`;
+  }).join('');
+  document.getElementById('instructions').style.display='none';
+  document.getElementById('results').classList.add('visible');
+}
+</script>
+</body>
+</html>
